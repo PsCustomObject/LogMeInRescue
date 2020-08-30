@@ -133,3 +133,55 @@ function Get-RescueUser
         return $returnData
     }
 }
+
+function Get-RescueHierarchy
+{
+    <#
+        .SYNOPSIS
+            Cmdlet will return an array with all nodes defined in rescue console.
+        
+        .DESCRIPTION
+            Cmdlet will return an array with all nodes defined in rescue console indipendently of the node type and their status.
+        
+        .PARAMETER AuthCode
+            A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
+        
+        .EXAMPLE
+            PS C:\> Get-RescueHierarchy -AuthCode 'Value1'
+    #>
+    
+    [OutputType([array])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $AuthCode
+    )
+    
+    # Define PsReference object
+    [ref]$resultRef = $null
+    
+    # Define endpoint URL
+    [string]$apiUrl = 'https://secure.logmeinrescue.com/API/API.asmx'
+    
+    # Initialize proxy object
+    $paramNewWebServiceProxy = @{
+        Uri       = $apiUrl
+        Namespace = 'getUser_v2'
+    }
+    
+    $apiProxy = New-WebServiceProxy @paramNewWebServiceProxy
+    
+    # Get hierarchy details
+    [string]$returnCode = $apiproxy.getHierarchy_v2($authToken, $false, $false, $false, $resultRef)
+    
+    if ($returnCode -ne 'getHierarchy_OK')
+    {
+        throw $returnCode
+    }
+    else
+    {
+        return $resultRef.Value
+    }
+}

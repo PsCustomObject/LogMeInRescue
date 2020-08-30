@@ -1,19 +1,4 @@
-﻿<#	
-	===========================================================================
-	 Created with: 	SAPIEN Technologies, Inc., PowerShell Studio 2020 v5.7.181
-	 Created on:   	29/08/2020 22:51
-	 Created by:   	Lethe
-	 Organization: 	
-	 Filename:     	LogMeInRescue.psd1
-	 -------------------------------------------------------------------------
-	 Module Manifest
-	-------------------------------------------------------------------------
-	 Module Name: LogMeInRescue
-	===========================================================================
-#>
-
-
-@{
+﻿@{
 	
 	# Script module or binary module file associated with this manifest
 	RootModule = 'LogMeInRescue.psm1'
