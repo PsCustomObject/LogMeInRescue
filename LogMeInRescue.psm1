@@ -1,6 +1,6 @@
 ﻿function Get-RescueAuthToken
 {
-    <#
+<#
     .SYNOPSIS
         Cmdlet is used to request a new Authentication Token to interact with LogMeInRescue API.
     
@@ -63,34 +63,50 @@
 
 function Get-RescueUser
 {
-    <#
-        .SYNOPSIS
-            Get users details in LogMeIn Rescue
-        
-        .DESCRIPTION
-            Cmdelt is used to retrieve information about any user configured in the LogMeIn Rescue portal.
-        
-        .PARAMETER AuthCode
-            A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
-        
-        .PARAMETER NodeId
-            An integer value representing the NodeID of a user for whcih properties should be retrieved.
-        
-        .EXAMPLE
-            PS C:\> Get-RescueUser -AuthCode 'Value1' -NodeId $value2
-    #>
+<#
+    .SYNOPSIS
+        Get users details in LogMeIn Rescue
+    
+    .DESCRIPTION
+        Cmdelt is used to retrieve information about any user configured in the LogMeIn Rescue portal.
+    
+    .PARAMETER AuthCode
+        A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
+    
+    .PARAMETER NodeId
+        An integer value representing the NodeID of a user for which properties should be retrieved.
+    
+    .PARAMETER UserEmail
+        A string representing the email of a user which properties should be retrieved.
+    
+    .EXAMPLE
+        PS C:\> Get-RescueUser -AuthCode 'Value1' -NodeId $value2
+    
+    .OUTPUTS
+        System.Management.Automation.PSObject
+    
+    .NOTES
+        Additional information about the function.
+#>
     
     [OutputType([pscustomobject])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(ParameterSetName = 'Email',
+                   Mandatory = $true)]
+        [Parameter(ParameterSetName = 'NodeId')]
         [ValidateNotNullOrEmpty()]
         [string]
         $AuthCode,
-        [Parameter(Mandatory = $true)]
+        [Parameter(ParameterSetName = 'NodeId',
+                   Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [int]
-        $NodeId
+        $NodeId,
+        [Parameter(ParameterSetName = 'Email')]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $UserEmail
     )
     
     # Define PsReference object
@@ -102,13 +118,28 @@ function Get-RescueUser
     # Initialize proxy object
     $paramNewWebServiceProxy = @{
         Uri       = $apiUrl
-        Namespace = 'getUser_v2'
+        Namespace = 'getUser_v3'
     }
     
     $apiProxy = New-WebServiceProxy @paramNewWebServiceProxy
     
-    # Request auth code
-    [string]$returnCode = $apiProxy.getUser_v2($NodeId, $AuthCode, $resultRef)
+    switch ($PSCmdlet.ParameterSetName)
+    {
+        'NodeId'
+        {
+            # Get user details
+            [string]$returnCode = $apiProxy.getUser_v2($NodeId, $AuthCode, $resultRef)
+            
+            break
+        }
+        'Email'
+        {
+            # Get user details
+            [string]$returnCode = $apiProxy.getUser_v3($null, $UserEmail, $AuthCode, $resultRef)
+            
+            break
+        }
+    }
     
     if ($returnCode -ne 'getUser_OK')
     {
@@ -121,6 +152,7 @@ function Get-RescueUser
             'Node ID' = $resultRef.'Value'.'iNodeID'
             'Name'    = $resultRef.'Value'.'sName'
             'Email'   = $resultRef.'Value'.'sEmail'
+            'Nick Name' = $resultRef.'Value'.'sNick'
             'SSO Username' = $resultRef.'Value'.'sSSOID'
             'Account Type' = $resultRef.'Value'.'eType'
             'Description' = $resultRef.'Value'.'sDescription'
@@ -136,19 +168,19 @@ function Get-RescueUser
 
 function Get-RescueHierarchy
 {
-    <#
-        .SYNOPSIS
-            Cmdlet will return an array with all nodes defined in rescue console.
-        
-        .DESCRIPTION
-            Cmdlet will return an array with all nodes defined in rescue console indipendently of the node type and their status.
-        
-        .PARAMETER AuthCode
-            A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
-        
-        .EXAMPLE
-            PS C:\> Get-RescueHierarchy -AuthCode 'Value1'
-    #>
+<#
+    .SYNOPSIS
+        Cmdlet will return an array with all nodes defined in rescue console.
+    
+    .DESCRIPTION
+        Cmdlet will return an array with all nodes defined in rescue console indipendently of the node type and their status.
+    
+    .PARAMETER AuthCode
+        A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
+    
+    .EXAMPLE
+        PS C:\> Get-RescueHierarchy -AuthCode 'Value1'
+#>
     
     [OutputType([array])]
     param
@@ -177,6 +209,197 @@ function Get-RescueHierarchy
     [string]$returnCode = $apiproxy.getHierarchy_v2($authToken, $false, $false, $false, $resultRef)
     
     if ($returnCode -ne 'getHierarchy_OK')
+    {
+        throw $returnCode
+    }
+    else
+    {
+        return $resultRef.Value
+    }
+}
+
+function Set-RescueUser
+{
+<#
+    .SYNOPSIS
+        Cmdlet updates the properties of a user in the company hierarchy.
+    
+    .DESCRIPTION
+        Cmdlet updates the properties of a user in the company hierarchy.
+    
+    .PARAMETER AuthCode
+        A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
+    
+    .PARAMETER NodeId
+        An integer representing the Node ID of the user which is being modified.
+    
+    .PARAMETER UserName
+        A string representing the name assigned to the user.
+    
+    .PARAMETER Description
+        A string representing the the descripion that will be used for the user.
+    
+    .PARAMETER Email
+        A string representing the email assigned to the user.
+    
+    .PARAMETER SSOUserName
+        A string representing the username, in email format, that will be configured for user configured for Single Sign-On.
+    
+    .PARAMETER UserPassword
+        A string representing the password that will be configured for the user.
+    
+    .PARAMETER OldUserPassword
+        A string representing the old password for the user.
+    
+    .PARAMETER UserStatus
+        A string representing the status of the user. Enabled or Disabled.
+    
+    .PARAMETER MobileAddOn
+        A boolean value representing MobileAddOn configuration for the user.
+    
+    .PARAMETER RPATAddon
+        A boolean value representing RPATAddon configuration for the user.
+    
+    .PARAMETER UserNick
+        A string representing the NickName configured for the user. 
+    
+        Parameter is not visible in Admin Console.
+    
+    .EXAMPLE
+        PS C:\> Set-RescueUser -AuthCode 'Value1' -NodeId $value2 -UserName 'Value3' -Email 'Value4' -UserStatus Enabled -MobileAddOn True -RPATAddon $value7
+#>
+    
+    [OutputType([void])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $AuthCode,
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [int]
+        $NodeId,
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $UserName,
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Description = $null,
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $Email,
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $SSOUserName = $null,
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $UserPassword = $null,
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $OldUserPassword = $null,
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('Enabled', 'Disabled', IgnoreCase = $true)]
+        [string]
+        $UserStatus,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('True', 'False', IgnoreCase = $true)]
+        [string]
+        $MobileAddOn,
+        [Parameter(Mandatory = $true)]
+        [bool]
+        $RPATAddon,
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $UserNick = $null
+    )
+    
+    # Define endpoint URL
+    [string]$apiUrl = 'https://secure.logmeinrescue.com/API/API.asmx'
+    
+    # Initialize proxy object
+    $paramNewWebServiceProxy = @{
+        Uri       = $apiUrl
+        Namespace = 'setUser_v2'
+    }
+    
+    $apiProxy = New-WebServiceProxy @paramNewWebServiceProxy
+    
+    if (($UserStatus -eq 'Enabled') -and
+        (([string]::IsNullOrEmpty($UserPassword) -eq $true) -and
+            ([string]::IsNullOrEmpty($SSOUserName) -eq $true)))
+    {
+        throw 'Cannot enable account if password is empty or no SSO username is configured'
+    }
+    
+    # Configure user properties
+    [string]$returnCode = $apiProxy.setUser_V2($NodeId, $UserName, $UserNick, $Email,
+        $SSOUserName, $UserPassword, $UserPassword,
+        $OldUserPassword, $UserStatus, $Description, $MobileAddOn,
+        $RPATAddon, $AuthCode)
+    
+    if ($returnCode -ne 'setUser_OK')
+    {
+        throw $returnCode
+    }
+}
+
+function New-RescueUser
+{
+<#
+    .SYNOPSIS
+        Cmdlet will create a new LogMeIn Rescue user.
+    
+    .DESCRIPTION
+        Cmdlet will create a new LogMeIn Rescue user (technician, administrator, or master administrator) in the company hierarchy (Organization Tree).
+    
+    .PARAMETER AuthCode
+        A string representing the AuthCode used to authenticate against LogMeIn Rescue API.
+    
+    .PARAMETER ParentNodeId
+        An integer representing the NodeID of an existing group in the company hierarchy.
+    
+    .EXAMPLE
+        PS C:\> New-RescueUser -AuthCode 'Value1' -ParentNodeId $value2
+    
+    .NOTES
+        Additional information about the function.
+#>
+    
+    [OutputType([int])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        $AuthCode,
+        [Parameter(Mandatory = $true)]
+        [int]
+        $ParentNodeId
+    )
+    
+    # Define PsReference object
+    [ref]$resultRef = $null
+    
+    # Define endpoint URL
+    [string]$apiUrl = 'https://secure.logmeinrescue.com/API/API.asmx'
+    
+    # Initialize proxy object
+    $paramNewWebServiceProxy = @{
+        Uri       = $apiUrl
+        Namespace = 'createUser'
+    }
+    
+    $apiProxy = New-WebServiceProxy @paramNewWebServiceProxy
+    
+    # Create user
+    [string]$returnCode = $apiProxy.createUser($ParentNodeId, $AuthCode, $resultRef)
+    
+    if ($returnCode -ne 'createUser_OK')
     {
         throw $returnCode
     }
