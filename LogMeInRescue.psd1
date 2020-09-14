@@ -4,7 +4,7 @@
 	RootModule = 'LogMeInRescue.psm1'
 	
 	# Version number of this module.
-	ModuleVersion = '1.0.0.0'
+	ModuleVersion = '1.0.0.1'
 	
 	# ID used to uniquely identify this module
 	GUID = 'fc43aa00-03d8-4759-ad16-a52e8805606e'

@@ -48,7 +48,7 @@
     $apiProxy = New-WebServiceProxy @paramNewWebServiceProxy
     
     # Request auth code
-    [string]$returnCode = $apiProxy.requestAuthCode($apiUser, $apiPassword, [ref]$authCodeRef)
+    [string]$returnCode = $apiProxy.requestAuthCode($UserName, $Password, [ref]$authCodeRef)
     
     if ($returnCode -ne 'requestAuthCode_OK')
     {
